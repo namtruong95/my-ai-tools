@@ -755,6 +755,30 @@ copy_non_marketplace_skills() {
 	fi
 }
 
+# Helper: Copy OpenCode commands, skipping my-ai-tools folder
+# Usage: copy_opencode_commands "source_dir" "dest_dir"
+copy_opencode_commands() {
+	local source_dir="$1"
+	local dest_dir="$2"
+
+	if [ -d "$source_dir" ] && [ "$(ls -A "$source_dir" 2>/dev/null)" ]; then
+		execute "mkdir -p \"$dest_dir\""
+		for item in "$source_dir"/*; do
+			if [ -d "$item" ]; then
+				command_name="$(basename "$item")"
+				# Skip my-ai-tools folder
+				if [ "$command_name" = "my-ai-tools" ]; then
+					continue
+				fi
+				safe_copy_dir "$item" "$dest_dir/$command_name"
+			elif [ -f "$item" ]; then
+				# Copy individual files (like .md files)
+				execute "cp \"$item\" \"$dest_dir/\""
+			fi
+		done
+	fi
+}
+
 # Helper: Install MCP server with interactive prompts
 # Usage: install_mcp_interactive "name" "install_cmd" "description"
 install_mcp_interactive() {
@@ -827,8 +851,10 @@ copy_configurations() {
 		execute "cp $SCRIPT_DIR/configs/opencode/opencode.json $HOME/.config/opencode/"
 		execute "rm -rf $HOME/.config/opencode/agent"
 		safe_copy_dir "$SCRIPT_DIR/configs/opencode/agent" "$HOME/.config/opencode/agent"
-		execute "rm -rf $HOME/.config/opencode/skill"
-		copy_non_marketplace_skills "$SCRIPT_DIR/configs/opencode/skill" "$HOME/.config/opencode/skill"
+		execute "rm -rf $HOME/.config/opencode/command"
+		copy_opencode_commands "$SCRIPT_DIR/configs/opencode/command" "$HOME/.config/opencode/command"
+		execute "rm -rf $HOME/.config/opencode/skills"
+		copy_non_marketplace_skills "$SCRIPT_DIR/skills" "$HOME/.config/opencode/skills"
 		log_success "OpenCode configs copied"
 	fi
 
@@ -1005,6 +1031,55 @@ install_remote_skills() {
 		log_info "Falling back to local skill installation..."
 		install_local_skills
 	fi
+}
+
+# Helper: Install recommended community skills from recommend-skills.json
+install_recommended_skills() {
+	log_info "Checking for recommended community skills..."
+
+	if ! command -v npx &>/dev/null; then
+		log_warning "npx not found, skipping recommended skills"
+		return
+	fi
+
+	if [ ! -f "$SCRIPT_DIR/configs/recommend-skills.json" ]; then
+		log_info "No recommended skills config found, skipping"
+		return
+	fi
+
+	local skills_json
+	skills_json=$(cat "$SCRIPT_DIR/configs/recommend-skills.json")
+	local skill_count
+	skill_count=$(echo "$skills_json" | jq '.recommended_skills | length')
+
+	if [ "$skill_count" -eq 0 ] || [ "$skill_count" = "null" ]; then
+		log_info "No recommended skills found in config"
+		return
+	fi
+
+	log_info "Found $skill_count recommended skill(s)"
+
+	for i in $(seq 0 $((skill_count - 1))); do
+		local repo description
+		repo=$(echo "$skills_json" | jq -r ".recommended_skills[$i].repo")
+		description=$(echo "$skills_json" | jq -r ".recommended_skills[$i].description")
+
+		log_info "  - $repo: $description"
+
+		if [ "$YES_TO_ALL" = true ] || [ ! -t 0 ]; then
+			execute "npx skills add '$repo' --yes --global --agent claude-code" 2>/dev/null && log_success "Installed: $repo" || log_info "Skipped: $repo"
+		elif [ -t 0 ]; then
+			read -p "Install $repo? (y/n) " -n 1 -r
+			echo
+			if [[ $REPLY =~ ^[Yy]$ ]]; then
+				execute "npx skills add '$repo' --global --agent claude-code" 2>/dev/null && log_success "Installed: $repo" || log_warning "Failed to install: $repo"
+			else
+				log_info "Skipped: $repo"
+			fi
+		fi
+	done
+
+	log_success "Recommended skills check complete"
 }
 
 # Helper: Check if a skill is in the remote skills list
@@ -1239,7 +1314,7 @@ enable_plugins() {
 
 		# Define target directories
 		CLAUDE_SKILLS_DIR="$HOME/.claude/skills"
-		OPENCODE_SKILL_DIR="$HOME/.config/opencode/skill"
+		OPENCODE_SKILL_DIR="$HOME/.config/opencode/skills"
 		AMP_SKILLS_DIR="$HOME/.config/amp/skills"
 		CODEX_SKILLS_DIR="$HOME/.codex/skills"
 		GEMINI_SKILLS_DIR="$HOME/.gemini/skills"
@@ -1253,7 +1328,7 @@ enable_plugins() {
 		fi
 		mkdir -p "$CLAUDE_SKILLS_DIR"
 
-		# Copy to OpenCode (~/.config/opencode/skill/)
+		# Copy to OpenCode (~/.config/opencode/skills/)
 		if [ -d "$OPENCODE_SKILL_DIR" ]; then
 			for existing_skill in "$OPENCODE_SKILL_DIR"/*; do
 				[ -d "$existing_skill" ] && rm -rf "$existing_skill"
@@ -1417,6 +1492,8 @@ enable_plugins() {
 
 		log_success "Claude Code plugins/skills installation complete"
 		log_info "IMPORTANT: Restart Claude Code for plugins to take effect"
+
+		install_recommended_skills
 	else
 		log_warning "Claude Code not installed - skipping official marketplace plugin installation"
 		log_info "Note: Community skills can still be installed without Claude CLI"
@@ -1429,6 +1506,8 @@ enable_plugins() {
 			install_remote_skills
 		fi
 		log_success "Community skills installation complete"
+
+		install_recommended_skills
 	fi
 }
 

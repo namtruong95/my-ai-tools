@@ -5,7 +5,7 @@
 			"permission": {
 				"bash": {
 					"$HOME/.claude/skills/qmd-knowledge/scripts/record.sh": "allow",
-					"$HOME/.config/opencode/skill/qmd-knowledge/scripts/record.sh": "allow",
+					"$HOME/.config/opencode/skills/qmd-knowledge/scripts/record.sh": "allow",
 					"git push": "ask",
 					"qmd": "allow",
 					"qmd get": "allow",
@@ -57,6 +57,11 @@
 			"command": ["qmd", "mcp"],
 			"enabled": true,
 			"type": "local"
+		},
+		"chrome-devtools": {
+			"enabled": true,
+			"type": "local",
+			"command": ["npx", "-y", "chrome-devtools-mcp@latest"]
 		}
 	},
 	"plugin": [
