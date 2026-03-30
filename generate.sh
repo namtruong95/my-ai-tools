@@ -403,6 +403,69 @@ generate_copilot_configs() {
 	fi
 }
 
+generate_cursor_configs() {
+	log_info "Generating Cursor Agent CLI configs..."
+
+	if [ -f "$HOME/.cursor/rules/general.mdc" ]; then
+		execute "mkdir -p \"$SCRIPT_DIR/configs/cursor\""
+		copy_single "$HOME/.cursor/rules/general.mdc" "$SCRIPT_DIR/configs/cursor/AGENTS.md"
+		log_success "Cursor Agent CLI configs generated"
+	else
+		log_warning "Cursor Agent CLI rules not found: $HOME/.cursor/rules/general.mdc"
+	fi
+
+	# Copy mcp.json for Cursor MCP server configuration
+	if [ -f "$HOME/.cursor/mcp.json" ]; then
+		execute "mkdir -p \"$SCRIPT_DIR/configs/cursor\""
+		copy_single "$HOME/.cursor/mcp.json" "$SCRIPT_DIR/configs/cursor/mcp.json"
+		log_success "Cursor MCP config generated"
+	else
+		log_warning "Cursor MCP config not found: $HOME/.cursor/mcp.json"
+	fi
+
+	# Copy skills from ~/.cursor/skills if it exists
+	if [ -d "$HOME/.cursor/skills" ]; then
+		execute "mkdir -p $SCRIPT_DIR/configs/cursor/skills"
+		if [ "$(ls -A "$HOME/.cursor/skills" 2>/dev/null)" ]; then
+			for skill_dir in "$HOME/.cursor/skills"/*; do
+				skill_name="$(basename "$skill_dir")"
+				case "$skill_name" in
+				prd | ralph | qmd-knowledge | codemap)
+					# Skip marketplace plugins - managed separately
+					;;
+				*)
+					# Check if skill already exists in skills
+					if skill_exists_in_plugins "$skill_name"; then
+						log_info "Skipping $skill_name (exists in skills)"
+					elif execute "cp -r '$skill_dir' '$SCRIPT_DIR/configs/cursor/skills'/ 2>/dev/null"; then
+						log_success "Copied skill: $skill_name"
+					fi
+					;;
+				esac
+			done
+		fi
+		log_success "Cursor skills generated"
+	else
+		log_warning "Cursor skills directory not found: $HOME/.cursor/skills"
+	fi
+
+	# Copy commands from ~/.cursor/commands if it exists
+	if [ -d "$HOME/.cursor/commands" ]; then
+		execute "mkdir -p $SCRIPT_DIR/configs/cursor/commands"
+		if [ "$(ls -A "$HOME/.cursor/commands" 2>/dev/null)" ]; then
+			if execute "cp -r '$HOME/.cursor/commands'/* '$SCRIPT_DIR/configs/cursor/commands'/ 2>/dev/null"; then
+				log_success "Cursor commands generated"
+			else
+				log_warning "Failed to copy some Cursor commands"
+			fi
+		else
+			log_warning "Cursor commands directory is empty"
+		fi
+	else
+		log_warning "Cursor commands directory not found: $HOME/.cursor/commands"
+	fi
+}
+
 generate_best_practices() {
 	log_info "Generating best-practices.md..."
 
@@ -471,6 +534,9 @@ main() {
 	echo
 
 	generate_copilot_configs
+	echo
+
+	generate_cursor_configs
 	echo
 
 	generate_best_practices

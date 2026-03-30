@@ -500,6 +500,7 @@ backup_configs() {
 		copy_config_dir "$HOME/.gemini" "$BACKUP_DIR" "gemini"
 		copy_config_dir "$HOME/.config/kilo" "$BACKUP_DIR" "kilo"
 		copy_config_dir "$HOME/.pi" "$BACKUP_DIR" "pi"
+		copy_config_dir "$HOME/.cursor" "$BACKUP_DIR" "cursor"
 		copy_config_file "$HOME/.config/ai-launcher/config.json" "$BACKUP_DIR/ai-launcher" || true
 
 		log_success "Backup completed: $BACKUP_DIR"
@@ -654,6 +655,21 @@ install_copilot() {
 	else
 		log_info "Installing GitHub Copilot CLI (non-interactive mode)..."
 		prompt_and_install
+	fi
+}
+
+install_cursor() {
+	log_info "Checking Cursor CLI..."
+	if command -v agent &>/dev/null; then
+		local agent_version
+		agent_version=$(agent --version 2>/dev/null || echo 'version unknown')
+		log_warning "Cursor Agent CLI is already installed ($agent_version)"
+	else
+		log_warning "Cursor Agent CLI is not installed; manual installation is required."
+		log_info "1. Install with: curl https://cursor.com/install -fsS | bash"
+		log_info "2. Add to PATH: export PATH=\"\$HOME/.local/bin:\$PATH\""
+		log_info "3. Verify with: agent --version"
+		log_info "See: https://cursor.com/docs/cli/installation"
 	fi
 }
 
@@ -881,6 +897,27 @@ copy_configurations() {
 		if [ -f "$SCRIPT_DIR/configs/copilot/mcp-config.json" ] && execute "cp \"$SCRIPT_DIR/configs/copilot/mcp-config.json\" \"$HOME/.copilot/mcp-config.json\""; then
 			log_success "GitHub Copilot MCP config copied"
 		fi
+	fi
+
+	# Copy Cursor Agent CLI global instructions.
+	# ~/.cursor/rules/ is read by the Cursor background agent for all sessions.
+	if [ -d "$HOME/.cursor" ] || command -v agent &>/dev/null; then
+		execute "mkdir -p \"$HOME/.cursor/rules\""
+		if [ -f "$SCRIPT_DIR/configs/cursor/AGENTS.md" ] && execute "cp \"$SCRIPT_DIR/configs/cursor/AGENTS.md\" \"$HOME/.cursor/rules/general.mdc\""; then
+			log_success "Cursor Agent CLI configs copied"
+		fi
+		# Copy mcp.json for Cursor MCP server configuration
+		if [ -f "$SCRIPT_DIR/configs/cursor/mcp.json" ] && execute "cp \"$SCRIPT_DIR/configs/cursor/mcp.json\" \"$HOME/.cursor/mcp.json\""; then
+			log_success "Cursor MCP config copied"
+		fi
+		# Copy skills to Cursor
+		execute "rm -rf $HOME/.cursor/skills"
+		copy_non_marketplace_skills "$SCRIPT_DIR/configs/cursor/skills" "$HOME/.cursor/skills"
+		log_success "Cursor skills copied"
+		# Copy commands to Cursor
+		execute "rm -rf $HOME/.cursor/commands"
+		safe_copy_dir "$SCRIPT_DIR/configs/cursor/commands" "$HOME/.cursor/commands"
+		log_success "Cursor commands copied"
 	fi
 
 	# Copy best practices and MEMORY.md
@@ -1272,6 +1309,7 @@ enable_plugins() {
 		AMP_SKILLS_DIR="$HOME/.config/amp/skills"
 		CODEX_SKILLS_DIR="$HOME/.codex/skills"
 		GEMINI_SKILLS_DIR="$HOME/.gemini/skills"
+		CURSOR_SKILLS_DIR="$HOME/.cursor/skills"
 
 		# Copy to Claude Code (~/.claude/skills/)
 		if [ -d "$CLAUDE_SKILLS_DIR" ]; then
@@ -1313,6 +1351,14 @@ enable_plugins() {
 		fi
 		mkdir -p "$GEMINI_SKILLS_DIR"
 
+		# Copy to Cursor (~/.cursor/skills/)
+		if [ -d "$CURSOR_SKILLS_DIR" ]; then
+			for existing_skill in "$CURSOR_SKILLS_DIR"/*; do
+				[ -d "$existing_skill" ] && rm -rf "$existing_skill"
+			done
+		fi
+		mkdir -p "$CURSOR_SKILLS_DIR"
+
 		# Copy all skills from skills folder to targets
 		for skill_dir in "$SCRIPT_DIR/skills"/*; do
 			if [ -d "$skill_dir" ]; then
@@ -1352,6 +1398,13 @@ enable_plugins() {
 					log_success "Copied $skill_name to Gemini CLI"
 				else
 					log_info "Skipped $skill_name for Gemini CLI (not compatible)"
+				fi
+
+				if skill_is_compatible_with "$skill_dir" "cursor"; then
+					safe_copy_dir "$skill_dir" "$CURSOR_SKILLS_DIR/$skill_name"
+					log_success "Copied $skill_name to Cursor"
+				else
+					log_info "Skipped $skill_name for Cursor (not compatible)"
 				fi
 			fi
 		done
@@ -1521,6 +1574,9 @@ main() {
 	echo
 
 	install_copilot
+	echo
+
+	install_cursor
 	echo
 
 	copy_configurations
