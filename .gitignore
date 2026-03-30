@@ -39,6 +39,5 @@ configs/ccs/config.json
 configs/ccs/delegation-sessions.json
 configs/ccs/cliproxy/bin/plus
 configs/amp/skills/ralph/archive
-.planning/codebase
 configs/ccs/cliproxy/cliproxy
 configs/ccs/cliproxy/auth
