@@ -392,16 +392,51 @@ safe_copy_dir() {
 		return 1
 	fi
 
-	# Prefer rsync when available to exclude node_modules and handle busy files
+	# Directories to exclude from copies (large, non-config data)
+	local -a exclude_dirs=(
+		"node_modules"
+		"plugins"
+		"projects"
+		"debug"
+		"sessions"
+		"git"
+		"cache"
+		"extensions"
+		"chats"
+		"antigravity"
+		"antigravity-browser-profile"
+		"log"
+		"logs"
+		"tmp"
+		"vendor_imports"
+		"file-history"
+		"ai-tracking"
+	)
+
+	# Prefer rsync when available to exclude large dirs and handle busy files
 	if command -v rsync &>/dev/null; then
-		if rsync -a --ignore-errors --exclude "node_modules" --exclude "node_modules/**" "$source_dir/" "$dest_dir/" 2>/dev/null; then
+		local -a rsync_excludes=()
+		for dir in "${exclude_dirs[@]}"; do
+			rsync_excludes+=(--exclude "$dir" --exclude "$dir/**")
+		done
+		rsync_excludes+=(--exclude "*.sqlite" --exclude "*.sqlite-wal" --exclude "*.sqlite-shm")
+		if rsync -a --ignore-errors "${rsync_excludes[@]}" "$source_dir/" "$dest_dir/" 2>/dev/null; then
 			return 0
 		fi
 	fi
 
-	# Fallback: copy non-binary files, skip busy binaries
+	# Fallback: copy non-binary files, skip busy binaries and excluded dirs
+	local prune_expr=""
+	for dir in "${exclude_dirs[@]}"; do
+		prune_expr="$prune_expr -name $dir -o"
+	done
+	# Remove trailing -o
+	prune_expr="${prune_expr% -o}"
+
 	mkdir -p "$dest_dir"
 	while IFS= read -r file; do
+		# Skip sqlite files
+		case "$file" in *.sqlite|*.sqlite-wal|*.sqlite-shm) continue ;; esac
 		rel_path="${file#"$source_dir"/}"
 		dest_file="$dest_dir/$rel_path"
 		mkdir -p "$(dirname "$dest_file")"
@@ -412,7 +447,7 @@ safe_copy_dir() {
 			((skipped++))
 			[ "$VERBOSE" = true ] && log_warning "Skipped busy file: $rel_path"
 		fi
-	done < <(find "$source_dir" -type d -name node_modules -prune -o -type f -print 2>/dev/null)
+	done < <(find "$source_dir" -type d \( $prune_expr \) -prune -o -type f -print 2>/dev/null)
 
 	# Log summary in verbose mode
 	[ "$VERBOSE" = true ] && [ $skipped -gt 0 ] && log_info "Skipped $skipped busy file(s)"
@@ -1035,29 +1070,34 @@ install_recommended_skills() {
 	log_info "Found $skill_count recommended skill(s)"
 
 	for i in $(seq 0 $((skill_count - 1))); do
-		local repo description
+		local repo description skill skill_suffix
 		repo=$(echo "$skills_json" | jq -r ".recommended_skills[$i].repo")
 		description=$(echo "$skills_json" | jq -r ".recommended_skills[$i].description")
+		skill=$(echo "$skills_json" | jq -r ".recommended_skills[$i].skill // empty")
+		skill_suffix=""
+		if [ -n "$skill" ]; then
+			skill_suffix="/$skill"
+		fi
 
-		log_info "  - $repo: $description"
+		log_info "  - $repo${skill_suffix}: $description"
 
 		if [ "$YES_TO_ALL" = true ] || [ ! -t 0 ]; then
-			if execute "npx skills add '$repo' --yes --global --agent claude-code" 2>/dev/null; then
-				log_success "Installed: $repo"
+			if [ -n "$skill" ]; then
+				execute "npx skills add '$repo' --skill '$skill' --yes --global --agent claude-code" 2>/dev/null && log_success "Installed: $repo${skill_suffix}" || log_info "Skipped: $repo${skill_suffix}"
 			else
-				log_info "Skipped: $repo"
+				execute "npx skills add '$repo' --yes --global --agent claude-code" 2>/dev/null && log_success "Installed: $repo" || log_info "Skipped: $repo"
 			fi
 		elif [ -t 0 ]; then
-			read -rp "Install $repo? (y/n) " -n 1
+			read -rp "Install $repo${skill_suffix}? (y/n) " -n 1
 			echo
 			if [[ $REPLY =~ ^[Yy]$ ]]; then
-				if execute "npx skills add '$repo' --global --agent claude-code" 2>/dev/null; then
-					log_success "Installed: $repo"
+				if [ -n "$skill" ]; then
+					execute "npx skills add '$repo' --skill '$skill' --global --agent claude-code" 2>/dev/null && log_success "Installed: $repo${skill_suffix}" || log_warning "Failed to install: $repo${skill_suffix}"
 				else
-					log_warning "Failed to install: $repo"
+					execute "npx skills add '$repo' --global --agent claude-code" 2>/dev/null && log_success "Installed: $repo" || log_warning "Failed to install: $repo"
 				fi
 			else
-				log_info "Skipped: $repo"
+				log_info "Skipped: $repo${skill_suffix}"
 			fi
 		fi
 	done
@@ -1132,6 +1172,7 @@ enable_plugins() {
 		"codemap|codemap@my-ai-tools|$SCRIPT_DIR|claude"
 		"claude-hud|claude-hud@claude-hud|jarrodwatts/claude-hud|claude"
 		"worktrunk|worktrunk@worktrunk|max-sixty/worktrunk|claude"
+		"openai-codex|codex@openai-codex|openai/codex-plugin-cc|claude"
 	)
 
 	install_plugin() {
