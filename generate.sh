@@ -466,6 +466,40 @@ generate_cursor_configs() {
 	fi
 }
 
+generate_factory_configs() {
+	log_info "Generating Factory Droid configs..."
+
+	if [ -d "$HOME/.factory" ] || command -v droid &>/dev/null; then
+		execute "mkdir -p \"$SCRIPT_DIR/configs/factory\""
+		if [ -f "$HOME/.factory/AGENTS.md" ]; then
+			copy_single "$HOME/.factory/AGENTS.md" "$SCRIPT_DIR/configs/factory/AGENTS.md"
+		else
+			log_warning "Factory Droid AGENTS.md not found: $HOME/.factory/AGENTS.md"
+		fi
+		if [ -d "$HOME/.factory/droids" ] && find "$HOME/.factory/droids" -maxdepth 1 -type f -name '*.md' | grep -q .; then
+			execute "mkdir -p \"$SCRIPT_DIR/configs/factory/droids\""
+			for droid_file in "$HOME/.factory/droids"/*.md; do
+				if [ -f "$droid_file" ]; then
+					droid_name="$(basename "$droid_file")"
+					copy_single "$droid_file" "$SCRIPT_DIR/configs/factory/droids/$droid_name"
+				fi
+			done
+		else
+			log_warning "Factory Droid droids directory not found or empty: $HOME/.factory/droids"
+		fi
+		# Export mcp.json and settings.json
+		if [ -f "$HOME/.factory/mcp.json" ]; then
+			copy_single "$HOME/.factory/mcp.json" "$SCRIPT_DIR/configs/factory/mcp.json"
+		fi
+		if [ -f "$HOME/.factory/settings.json" ]; then
+			copy_single "$HOME/.factory/settings.json" "$SCRIPT_DIR/configs/factory/settings.json"
+		fi
+		log_success "Factory Droid configs generated"
+	else
+		log_warning "Factory Droid not found (install with: npm install -g @factory/cli)"
+	fi
+}
+
 generate_best_practices() {
 	log_info "Generating best-practices.md..."
 
@@ -537,6 +571,9 @@ main() {
 	echo
 
 	generate_cursor_configs
+	echo
+
+	generate_factory_configs
 	echo
 
 	generate_best_practices

@@ -436,7 +436,7 @@ safe_copy_dir() {
 	mkdir -p "$dest_dir"
 	while IFS= read -r file; do
 		# Skip sqlite files
-		case "$file" in *.sqlite|*.sqlite-wal|*.sqlite-shm) continue ;; esac
+		case "$file" in *.sqlite | *.sqlite-wal | *.sqlite-shm) continue ;; esac
 		rel_path="${file#"$source_dir"/}"
 		dest_file="$dest_dir/$rel_path"
 		mkdir -p "$(dirname "$dest_file")"
@@ -536,6 +536,7 @@ backup_configs() {
 		copy_config_dir "$HOME/.config/kilo" "$BACKUP_DIR" "kilo"
 		copy_config_dir "$HOME/.pi" "$BACKUP_DIR" "pi"
 		copy_config_dir "$HOME/.cursor" "$BACKUP_DIR" "cursor"
+		copy_config_dir "$HOME/.factory" "$BACKUP_DIR" "factory"
 		copy_config_file "$HOME/.config/ai-launcher/config.json" "$BACKUP_DIR/ai-launcher" || true
 
 		log_success "Backup completed: $BACKUP_DIR"
@@ -706,6 +707,14 @@ install_cursor() {
 		log_info "3. Verify with: agent --version"
 		log_info "See: https://cursor.com/docs/cli/installation"
 	fi
+}
+
+install_factory() {
+	_run_factory_install() {
+		execute "npm install -g @factory/cli"
+		log_success "Factory Droid CLI installed"
+	}
+	run_installer "Factory Droid" "_run_factory_install" "command -v droid" ""
 }
 
 # Helper: Copy non-marketplace skills from source to destination
@@ -955,6 +964,23 @@ copy_configurations() {
 		log_success "Cursor commands copied"
 	fi
 
+	# Copy Factory Droid configs.
+	# ~/.factory/AGENTS.md provides global agent guidelines for all Factory Droid sessions.
+	# ~/.factory/droids/ contains custom droid definitions available globally.
+	# ~/.factory/mcp.json contains MCP server configurations.
+	# ~/.factory/settings.json contains Factory Droid settings.
+	if [ -d "$HOME/.factory" ] || command -v droid &>/dev/null; then
+		execute "mkdir -p \"$HOME/.factory/droids\""
+		copy_config_file "$SCRIPT_DIR/configs/factory/AGENTS.md" "$HOME/.factory/" || true
+		copy_config_file "$SCRIPT_DIR/configs/factory/mcp.json" "$HOME/.factory/" || true
+		copy_config_file "$SCRIPT_DIR/configs/factory/settings.json" "$HOME/.factory/" || true
+		if [ -d "$SCRIPT_DIR/configs/factory/droids" ] && [ "$(ls -A "$SCRIPT_DIR/configs/factory/droids" 2>/dev/null)" ]; then
+			safe_copy_dir "$SCRIPT_DIR/configs/factory/droids" "$HOME/.factory/droids"
+			log_success "Factory Droid custom droids copied"
+		fi
+		log_success "Factory Droid configs copied"
+	fi
+
 	# Copy best practices and MEMORY.md
 	execute "mkdir -p $HOME/.ai-tools"
 	execute "cp $SCRIPT_DIR/configs/best-practices.md $HOME/.ai-tools/"
@@ -1103,6 +1129,43 @@ install_recommended_skills() {
 	done
 
 	log_success "Recommended skills check complete"
+}
+
+# Helper: Remove skills from tool-specific directories that already exist in global ~/.agents/skills
+cleanup_duplicate_skills() {
+	local global_skills_dir="$HOME/.agents/skills"
+
+	# Skip if global skills directory doesn't exist
+	if [ ! -d "$global_skills_dir" ]; then
+		return 0
+	fi
+
+	log_info "Cleaning up duplicate skills from tool-specific directories..."
+
+	# Define target directories using existing variables where available
+	local -a target_dirs=(
+		"$CLAUDE_SKILLS_DIR"
+		"$OPENCODE_SKILL_DIR"
+		"$AMP_SKILLS_DIR"
+		"$CODEX_SKILLS_DIR"
+		"$GEMINI_SKILLS_DIR"
+		"$CURSOR_SKILLS_DIR"
+	)
+
+	for target_dir in "${target_dirs[@]}"; do
+		if [ -d "$target_dir" ]; then
+			for skill_dir in "$target_dir"/*; do
+				if [ -d "$skill_dir" ]; then
+					local skill_name
+					skill_name=$(basename "$skill_dir")
+					if [ -d "$global_skills_dir/$skill_name" ]; then
+						execute "rm -rf '$skill_dir'"
+						log_info "Removed duplicate skill $skill_name from $target_dir/"
+					fi
+				fi
+			done
+		fi
+	done
 }
 
 # Helper: Check if a skill is in the remote skills list
@@ -1405,6 +1468,12 @@ enable_plugins() {
 			if [ -d "$skill_dir" ]; then
 				skill_name=$(basename "$skill_dir")
 
+				# Skip if skill already exists in global skills directory (to avoid conflicts)
+				if [ -d "$HOME/.agents/skills/$skill_name" ]; then
+					log_info "Skipped $skill_name (already exists in ~/.agents/skills/)"
+					continue
+				fi
+
 				# Check compatibility and copy to each platform
 				if skill_is_compatible_with "$skill_dir" "claude"; then
 					safe_copy_dir "$skill_dir" "$CLAUDE_SKILLS_DIR/$skill_name"
@@ -1560,14 +1629,18 @@ enable_plugins() {
 		log_success "Community skills installation complete"
 
 		install_recommended_skills
+
+		# Clean up duplicate skills that conflict with global ~/.agents/skills directory
+		cleanup_duplicate_skills
 	fi
 }
 
 main() {
-	echo "╔════════════════════════════════════════════════════════════════════╗"
-	echo "║           AI Tools Setup                                           ║"
-	echo "║   Claude • OpenCode • Amp • CCS • Codex • Gemini • Pi • Kilo • Copilot ║"
-	echo "╚════════════════════════════════════════════════════════════════════╝"
+	echo "╔══════════════════════════════════════════════════════════════════════╗"
+	echo "║                        AI Tools Setup                               ║"
+	echo "║  Claude • OpenCode • Amp • CCS • Codex • Gemini • Pi • Kilo         ║"
+	echo "║  Copilot • Cursor • Factory Droid                                    ║"
+	echo "╚══════════════════════════════════════════════════════════════════════╝"
 	echo
 
 	if [ "$DRY_RUN" = true ]; then
@@ -1618,6 +1691,9 @@ main() {
 	echo
 
 	install_cursor
+	echo
+
+	install_factory
 	echo
 
 	copy_configurations
