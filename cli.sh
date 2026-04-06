@@ -269,6 +269,52 @@ install_qmd_now() {
 	return 1
 }
 
+install_fff_mcp_now() {
+	if command -v fff-mcp &>/dev/null; then
+		log_success "fff-mcp already installed"
+		return 0
+	fi
+
+	log_info "Installing fff-mcp via official installer..."
+	if execute_installer "https://dmtrkovalenko.dev/install-fff-mcp.sh" "" "fff-mcp"; then
+		# Ensure ~/.local/bin is in PATH for the current session
+		local local_bin="$HOME/.local/bin"
+		if [[ ":$PATH:" != *":$local_bin:"* ]]; then
+			export PATH="$local_bin:$PATH"
+		fi
+		log_success "fff-mcp installed successfully"
+		return 0
+	fi
+
+	log_error "Failed to install fff-mcp"
+	log_info "You can install it manually: curl -fsSL https://dmtrkovalenko.dev/install-fff-mcp.sh | bash"
+	return 1
+}
+
+handle_fff_mcp_installation_if_needed() {
+	if command -v fff-mcp &>/dev/null; then
+		log_success "fff-mcp found"
+		return 0
+	fi
+
+	if [ "$YES_TO_ALL" = true ]; then
+		log_info "Auto-installing fff-mcp (--yes flag)..."
+		if ! install_fff_mcp_now; then
+			log_warning "Continuing without fff-mcp. Fast file search MCP will be unavailable."
+		fi
+	elif [ -t 0 ]; then
+		if prompt_yn "fff-mcp is not installed. Install it now (fast file search for AI)"; then
+			if ! install_fff_mcp_now; then
+				log_warning "Continuing without fff-mcp. Fast file search MCP will be unavailable."
+			fi
+		else
+			log_warning "fff-mcp not installed. Fast file search MCP will be unavailable."
+		fi
+	else
+		log_warning "fff-mcp not installed. Fast file search MCP will be unavailable."
+	fi
+}
+
 resolve_installer_checksum() {
 	local installer="$1"
 	local checksum_url=""
@@ -888,6 +934,13 @@ copy_non_marketplace_skills() {
 		return 0
 	fi
 
+	# Check if global skills directory exists - if so, skip copying to tool-specific dirs
+	# to avoid conflicts. Global ~/.agents/skills/ is the preferred location.
+	if [ -d "$HOME/.agents/skills" ] && [ "$YES_TO_ALL" = true ]; then
+		log_info "Global skills directory found at ~/.agents/skills - skipping tool-specific skill copy to avoid conflicts"
+		return 0
+	fi
+
 	execute_quoted rm -rf "$dest_dir"
 	execute_quoted mkdir -p "$dest_dir"
 
@@ -900,8 +953,8 @@ copy_non_marketplace_skills() {
 		skill_name="$(basename "$skill_dir")"
 
 		case "$skill_name" in
-		prd | ralph | qmd-knowledge | codemap)
-			# Skip marketplace plugins
+		prd | ralph | qmd-knowledge | codemap | adr | handoffs | pickup | pr-review | slop | tdd | grill-me | plannotator-compound | plannotator-review)
+			# Skip marketplace plugins and skills that conflict with ~/.agents/skills/
 			;;
 		*)
 			safe_copy_dir "$skill_dir" "$dest_dir/$skill_name"
@@ -1076,6 +1129,13 @@ setup_claude_mcp_servers() {
 		log_warning "qmd not found. MCP setup skipped. Install with: bun install -g @tobilu/qmd"
 	fi
 
+	handle_fff_mcp_installation_if_needed
+	if command -v fff-mcp &>/dev/null; then
+		install_mcp_interactive "fff" "claude mcp add --scope user --transport stdio fff -- fff-mcp" "fast file search with memory"
+	else
+		log_warning "fff-mcp not found. MCP setup skipped. Install with: curl -fsSL https://dmtrkovalenko.dev/install-fff-mcp.sh | bash"
+	fi
+
 	log_success "MCP server setup complete (global scope)"
 }
 
@@ -1214,6 +1274,7 @@ copy_kilo_configs() {
 	log_info "Detected Kilo CLI (via $kilo_status)"
 	execute_quoted mkdir -p "$HOME/.config/kilo"
 	copy_config_file "$SCRIPT_DIR/configs/kilo/config.json" "$HOME/.config/kilo/" || true
+	copy_config_file "$SCRIPT_DIR/configs/kilo/AGENTS.md" "$HOME/.config/kilo/" || true
 	log_success "Kilo CLI configs copied"
 }
 
@@ -1238,6 +1299,8 @@ copy_pi_configs() {
 		execute_quoted mkdir -p "$HOME/.pi/agent/themes"
 		safe_copy_dir "$SCRIPT_DIR/configs/pi/themes" "$HOME/.pi/agent/themes"
 	fi
+
+	copy_config_file "$SCRIPT_DIR/configs/pi/AGENTS.md" "$HOME/.pi/agent/" || true
 
 	copy_non_marketplace_skills "$SCRIPT_DIR/configs/pi/skills" "$HOME/.pi/agent/skills"
 
@@ -1411,7 +1474,20 @@ install_recommended_skills() {
 
 	log_info "Found $skill_count recommended skill(s)"
 
+	# Install specific skills from recommend-skills.json based on YES_TO_ALL
+	# When -y is used, only install: grill-me from matt and 2 react skills from vercel
+	local install_count=0
+	local max_installs=3
+	if [ "$YES_TO_ALL" = true ]; then
+		max_installs=3  # grill-me + 2 react skills
+	fi
+
 	for i in $(seq 0 $((skill_count - 1))); do
+		# When using -y, limit to first 3 skills (grill-me + vercel + expo react skills)
+		if [ "$YES_TO_ALL" = true ] && [ "$install_count" -ge "$max_installs" ]; then
+			log_info "Reached maximum recommended skills for -y mode ($max_installs), skipping remaining"
+			break
+		fi
 		local repo description skill skill_suffix
 		repo=$(echo "$skills_json" | jq -r ".recommended_skills[$i].repo")
 		description=$(echo "$skills_json" | jq -r ".recommended_skills[$i].description")
@@ -1421,6 +1497,7 @@ install_recommended_skills() {
 
 		log_info "  - $repo${skill_suffix}: $description"
 		install_single_recommended_skill "$repo" "$skill" "$skill_suffix"
+		install_count=$((install_count + 1))
 	done
 
 	log_success "Recommended skills check complete"
@@ -1803,6 +1880,13 @@ skill_is_compatible_with() {
 install_local_skills() {
 	if [ ! -d "$SCRIPT_DIR/skills" ]; then
 		log_info "skills folder not found, skipping local skills"
+		return 0
+	fi
+
+	# Check if global skills directory exists - if so, skip tool-specific copies
+	# to avoid conflicts. Global ~/.agents/skills/ is the preferred location.
+	if [ -d "$HOME/.agents/skills" ] && [ "$YES_TO_ALL" = true ]; then
+		log_info "Global skills directory found at ~/.agents/skills - skipping tool-specific skill copy"
 		return 0
 	fi
 

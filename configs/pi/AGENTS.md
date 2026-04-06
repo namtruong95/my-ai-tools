@@ -1,4 +1,4 @@
-# 🤖 GitHub Copilot CLI Agent Guidelines
+# 🤖 Pi Agent Guidelines
 
 ## AI Tool Guidelines
 - Use the fff MCP tools for all file search operations instead of default tools.
@@ -10,13 +10,8 @@
 - Keep responses concise and actionable.
 - Never run destructive commands.
 - Use our conventions for file names, tests, and commands.
-
-## Code Quality
-
 - Keep your code clean and organized. Do not over-engineer solutions or overcomplicate things unnecessarily.
 - Write clear and concise code. Avoid unnecessary complexity and redundancy.
 - Use meaningful variable and function names.
 - Prefer self-documenting code. Write comments and documentation where necessary.
 - Keep your code modular and reusable. Avoid tight coupling and excessive dependencies.
-- Run typecheck, lint and biome on js/ts file changes after finish.
-- Prefer to use Bun to run scripts if possible, otherwise use tsx to run ts files.

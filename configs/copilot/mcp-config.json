@@ -13,6 +13,20 @@
 			"args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
 			"env": {},
 			"tools": ["*"]
+		},
+		"fff": {
+			"type": "local",
+			"command": "fff-mcp",
+			"args": [],
+			"env": {},
+			"tools": ["*"]
+		},
+		"qmd": {
+			"type": "local",
+			"command": "qmd",
+			"args": ["mcp"],
+			"env": {},
+			"tools": ["*"]
 		}
 	}
 }
