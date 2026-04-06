@@ -124,10 +124,10 @@ The installer supports Windows via PowerShell or Git Bash.
 ### Option 1: PowerShell (Recommended for Windows)
 
 ```powershell
-# Download and run the PowerShell installer
+# Run directly from the published URL
 irm https://ai-tools.itman.fyi/install.ps1 | iex
 
-# To pass options, download first, then run:
+# To pass options, download first, then run the local file:
 irm https://ai-tools.itman.fyi/install.ps1 -OutFile install.ps1
 .\install.ps1 -DryRun
 ```

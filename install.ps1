@@ -23,7 +23,6 @@ param(
     [switch]$Backup,
     [switch]$NoBackup,
     [switch]$Yes,
-    [switch]$Verbose,
     [switch]$Rollback
 )
 
@@ -50,9 +49,6 @@ function Write-Err {
     param([string]$Message)
     Write-Host "✗ $Message" -ForegroundColor Red
 }
-
-# Check if running on Windows
-$IsWindowsOS = $env:OS -eq "Windows_NT" -or $IsWindows
 
 # Find Git Bash
 function Find-GitBash {
@@ -183,16 +179,36 @@ function Test-Prerequisites {
     return $true
 }
 
+function Test-NonInteractiveInstall {
+    $isInputRedirected = $false
+
+    try {
+        $isInputRedirected = [Console]::IsInputRedirected
+    }
+    catch {
+        $isInputRedirected = $false
+    }
+
+    return $isInputRedirected -or [string]::IsNullOrEmpty($PSCommandPath)
+}
+
 # Main installation function
 function Start-Installation {
     # Build argument array for cli.sh
     $arguments = @()
+    $isVerboseRequested = $PSBoundParameters.ContainsKey('Verbose')
+    $isNonInteractive = Test-NonInteractiveInstall
+
     if ($DryRun) { $arguments += "--dry-run" }
     if ($Backup) { $arguments += "--backup" }
     if ($NoBackup) { $arguments += "--no-backup" }
     if ($Yes) { $arguments += "--yes" }
-    if ($Verbose) { $arguments += "--verbose" }
+    if ($isVerboseRequested) { $arguments += "--verbose" }
     if ($Rollback) { $arguments += "--rollback" }
+
+    if ($isNonInteractive -and -not $Yes) {
+        $arguments = @("--yes") + $arguments
+    }
 
     # Find Git Bash
     $bashPath = Find-GitBash
@@ -203,48 +219,46 @@ function Start-Installation {
         exit 1
     }
 
-    # Check if we're in the repo directory (cli.sh exists)
-    $repoDir = $PSScriptRoot
-    $cliScript = Join-Path $repoDir "cli.sh"
+    $tmpRoot = Join-Path $HOME ".claude\tmp"
+    New-Item -ItemType Directory -Path $tmpRoot -Force | Out-Null
+    $env:TMPDIR = $tmpRoot
 
-    if (Test-Path $cliScript) {
-        # Local execution - run cli.sh directly
-        Write-Info "Running local cli.sh..."
+    $tempDir = Join-Path $tmpRoot ([System.IO.Path]::GetRandomFileName())
+    New-Item -ItemType Directory -Path $tempDir | Out-Null
+
+    try {
+        Write-Info "Cloning repository to temporary directory..."
+        & git clone --depth 1 https://github.com/jellydn/my-ai-tools.git $tempDir
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-Err "Failed to clone repository"
+            Write-Info "Please check your internet connection and try again"
+            Write-Info "If the problem persists, the repository URL may have changed"
+            exit 1
+        }
+
+        Write-Success "Repository cloned successfully"
+        Write-Info "Running installation script..."
         Write-Info "Bash path: $bashPath"
         Write-Info "Arguments: $($arguments -join ' ')"
 
-        & $bashPath $cliScript @arguments
-    } else {
-        # Remote execution - clone and run
-        Write-Info "Repository not found locally. Cloning from GitHub..."
-
-        $tempDir = [System.IO.Path]::GetTempFileName()
-        Remove-Item $tempDir
-        New-Item -ItemType Directory -Path $tempDir | Out-Null
-
+        Push-Location $tempDir
         try {
-            # Clone repository
-            Write-Info "Cloning my-ai-tools repository..."
-            & git clone --depth 1 https://github.com/jellydn/my-ai-tools.git $tempDir
-
-            if ($LASTEXITCODE -ne 0) {
-                Write-Err "Failed to clone repository"
-                exit 1
+            if ($isNonInteractive) {
+                $bashArguments = if ($arguments.Count -gt 0) { $arguments -join ' ' } else { '' }
+                & $bashPath -lc "bash cli.sh $bashArguments </dev/null"
             }
-
-            Write-Success "Repository cloned successfully"
-
-            # Run the installer
-            $cliScript = Join-Path $tempDir "cli.sh"
-            Write-Info "Running installer..."
-
-            & $bashPath $cliScript @arguments
+            else {
+                & $bashPath "cli.sh" @arguments
+            }
         }
         finally {
-            # Cleanup
-            if (Test-Path $tempDir) {
-                Remove-Item -Recurse -Force $tempDir -ErrorAction SilentlyContinue
-            }
+            Pop-Location
+        }
+    }
+    finally {
+        if (Test-Path $tempDir) {
+            Remove-Item -Recurse -Force $tempDir -ErrorAction SilentlyContinue
         }
     }
 
@@ -269,6 +283,8 @@ Write-Host @"
 ║  PowerShell wrapper for Windows installation                        ║
 ╚══════════════════════════════════════════════════════════════════════╝
 "@ -ForegroundColor Cyan
+
+Write-Info "Starting my-ai-tools installation..."
 
 # Check prerequisites
 if (-not (Test-Prerequisites)) {
