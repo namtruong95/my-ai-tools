@@ -182,12 +182,14 @@ The script will prompt you to install each MCP server:
 - [`sequential-thinking`](https://mcp.so/server/sequentialthinking) - Multi-step reasoning for complex analysis
 - [`qmd`](https://github.com/tobi/qmd) - Quick Markdown Search with AI-powered knowledge management
 - [`fff`](https://github.com/dmtrKovalenko/fff.nvim) - Fast file search with built-in memory for AI agents
+- [`chrome-devtools`](https://github.com/vercel/chrome-devtools-mcp) - Chrome DevTools integration for browser automation
+- [`react-grab-mcp`](https://github.com/nyan-left/react-grab-mcp) - React component extraction and analysis
 
 #### Manual Setup
 
-##### For Claude Desktop
+##### For Claude Code
 
-Add to [`~/.claude/mcp-servers.json`](configs/claude/mcp-servers.json):
+Configuration in [`~/.claude/mcp-servers.json`](configs/claude/mcp-servers.json):
 
 ```json
 {
@@ -213,43 +215,13 @@ Add to [`~/.claude/mcp-servers.json`](configs/claude/mcp-servers.json):
 }
 ```
 
-##### For Claude Code
-
-Use the CLI (installed globally for all projects):
+Or use the CLI (installed globally for all projects):
 
 ```bash
 claude mcp add --scope user --transport stdio context7 -- npx -y @upstash/context7-mcp@latest
 claude mcp add --scope user --transport stdio sequential-thinking -- npx -y @modelcontextprotocol/server-sequential-thinking
 claude mcp add --scope user --transport stdio qmd -- qmd mcp
-# Install fff-mcp binary first, then register it
-curl -fsSL https://dmtrkovalenko.dev/install-fff-mcp.sh | bash
-claude mcp add --scope user --transport stdio fff -- fff-mcp
-```
-
-##### For OpenCode
-
-The `fff` MCP is already included in [`configs/opencode/opencode.json`](configs/opencode/opencode.json). For manual setup, add to `~/.config/opencode/opencode.json`:
-
-```json
-{
-  "mcp": {
-    "fff": {
-      "type": "local",
-      "command": ["fff-mcp"],
-      "enabled": true
-    }
-  }
-}
-```
-
-##### For Codex
-
-The `fff` MCP is already included in [`configs/codex/config.toml`](configs/codex/config.toml). For manual setup, add to `~/.codex/config.toml`:
-
-```toml
-[mcp_servers.fff]
-command = "fff-mcp"
-args = []
+claude mcp add --scope user --transport stdio fff -- fff-mcp  # Requires: curl -fsSL https://dmtrkovalenko.dev/install-fff-mcp.sh | bash
 ```
 
 > **MCP Scopes:**
@@ -703,6 +675,21 @@ Copy [`configs/opencode/opencode.json`](configs/opencode/opencode.json) to `~/.c
       "type": "local",
       "command": ["qmd", "mcp"],
       "enabled": true
+    },
+    "chrome-devtools": {
+      "type": "local",
+      "command": ["npx", "-y", "chrome-devtools-mcp@latest"],
+      "enabled": true
+    },
+    "fff": {
+      "type": "local",
+      "command": ["fff-mcp"],
+      "enabled": true
+    },
+    "sequential-thinking": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "enabled": true
     }
   },
   "agent": {
@@ -828,9 +815,9 @@ Copy [`configs/amp/settings.json`](configs/amp/settings.json) to `~/.config/amp/
       "command": "npx",
       "args": ["chrome-devtools-mcp@latest"]
     },
-    "backlog": {
-      "command": "backlog",
-      "args": ["mcp", "start"]
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
     },
     "qmd": {
       "command": "qmd",
@@ -839,8 +826,13 @@ Copy [`configs/amp/settings.json`](configs/amp/settings.json) to `~/.config/amp/
     "fff": {
       "command": "fff-mcp",
       "args": []
+    },
+    "react-grab-mcp": {
+      "command": "npx",
+      "args": ["-y", "@react-grab/mcp", "--stdio"]
     }
-  }
+  },
+  "amp.terminal.theme": "kanagawa"
 }
 ```
 
@@ -932,9 +924,32 @@ npm install -g @openai/codex
 
 Located in [`configs/codex/`](configs/codex/):
 
-- [`config.json`](configs/codex/config.json) - Main configuration
-- [`config.toml`](configs/codex/config.toml) - Alternative TOML format
+- [`config.toml`](configs/codex/config.toml) - Main TOML configuration with MCP servers
 - [`AGENTS.md`](configs/codex/AGENTS.md) - Agent guidelines
+
+### MCP Servers
+
+```toml
+[mcp_servers.context7]
+command = "npx"
+args = [ "-y", "@upstash/context7-mcp" ]
+
+[mcp_servers.sequential-thinking]
+command = "npx"
+args = [ "-y", "@modelcontextprotocol/server-sequential-thinking" ]
+
+[mcp_servers.qmd]
+command = "qmd"
+args = [ "mcp" ]
+
+[mcp_servers.fff]
+command = "fff-mcp"
+args = []
+
+[mcp_servers.react-grab-mcp]
+command = "npx"
+args = [ "-y", "@react-grab/mcp", "--stdio" ]
+```
 
 ### Usage
 
@@ -1057,6 +1072,10 @@ Configure MCP servers in `~/.gemini/settings.json` to extend functionality:
     "qmd": {
       "command": "qmd",
       "args": ["mcp"]
+    },
+    "fff": {
+      "command": "fff-mcp",
+      "args": []
     }
   },
   "experimental": {
@@ -1097,6 +1116,35 @@ Configuration is managed through:
 1. `/connect` command for provider setup (interactive)
 2. Config files directly at `~/.config/kilo/config.json`
 3. `kilo auth` for credential management
+
+### MCP Servers
+
+```json
+{
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "enabled": true
+    },
+    "qmd": {
+      "type": "local",
+      "command": ["qmd", "mcp"],
+      "enabled": true
+    },
+    "fff": {
+      "type": "local",
+      "command": ["fff-mcp"],
+      "enabled": true
+    },
+    "sequential-thinking": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "enabled": true
+    }
+  }
+}
+```
 
 ### Key Features
 
@@ -1148,9 +1196,9 @@ Located in [`configs/pi/`](configs/pi/):
 
 - [`settings.json`](configs/pi/settings.json) - Global settings with package registrations
 
-### Installing Pi Packages
+### Pi Packages
 
-Pi has its own package ecosystem. Install packages with:
+Pi uses a package-based extension system (not MCP). Install packages with:
 
 ```bash
 pi install pi-flow-enforcer
@@ -1161,7 +1209,15 @@ Then register them in `.pi/settings.json`:
 
 ```json
 {
-  "packages": ["pi-flow-enforcer", "pi-agent-pack"]
+  "packages": [
+    "npm:@plannotator/pi-extension",
+    "npm:pi-subagents",
+    "https://github.com/davebcn87/pi-autoresearch",
+    "git:github.com/jellydn/pi-fireworks-provider",
+    "npm:pi-hooks",
+    "git:github.com/SamuelLHuber/pi-fff",
+    "npm:pi-annotate"
+  ]
 }
 ```
 
@@ -1202,6 +1258,35 @@ Copilot CLI configs are stored in [`configs/copilot/`](configs/copilot/) and ins
 
 - [`AGENTS.md`](configs/copilot/AGENTS.md) - Agent guidelines and best practices, installed to `~/.copilot/copilot-instructions.md`
 - [`mcp-config.json`](configs/copilot/mcp-config.json) - MCP server configuration, installed to `~/.copilot/mcp-config.json`
+
+### MCP Servers
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    },
+    "sequential-thinking": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "fff": {
+      "type": "local",
+      "command": "fff-mcp",
+      "args": []
+    },
+    "qmd": {
+      "type": "local",
+      "command": "qmd",
+      "args": ["mcp"]
+    }
+  }
+}
+```
 
 ### Usage
 
@@ -1306,12 +1391,51 @@ droid /login
 
 ### Configuration
 
-Factory Droid configs are stored in `@configs/factory/` and installed to `@~/.factory/`:
+Factory Droid configs are stored in `configs/factory/` and installed to `~/.factory/`:
 
-- `@configs/factory/AGENTS.md` - Global agent guidelines, installed to `@~/.factory/AGENTS.md`
-- `@configs/factory/mcp.json` - MCP server configurations, installed to `@~/.factory/mcp.json`
-- `@configs/factory/settings.json` - Factory Droid settings, installed to `@~/.factory/settings.json`
-- `@configs/factory/droids/` - Optional user-created directory for custom droid definitions, installed to `@~/.factory/droids/`
+- [`AGENTS.md`](configs/factory/AGENTS.md) - Global agent guidelines
+- [`mcp.json`](configs/factory/mcp.json) - MCP server configurations
+- [`settings.json`](configs/factory/settings.json) - Factory Droid settings
+- `droids/` - Optional user-created directory for custom droid definitions
+
+### MCP Servers
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    },
+    "sequential-thinking": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "chrome-devtools": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"]
+    },
+    "fff": {
+      "type": "stdio",
+      "command": "fff-mcp",
+      "args": []
+    },
+    "qmd": {
+      "type": "stdio",
+      "command": "qmd",
+      "args": ["mcp"]
+    },
+    "react-grab-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@react-grab/mcp", "--stdio"]
+    }
+  }
+}
+```
 
 ### Usage
 
@@ -1447,6 +1571,13 @@ npx skills add vercel-labs/agent-browser
 /plugin marketplace add sawyerhood/dev-browser
 /plugin install dev-browser@sawyerhood/dev-browser
 ```
+
+### React Tools
+
+For React developers:
+
+- [**React Grab**](https://www.react-grab.com/) - MCP server for extracting and analyzing React components (`@react-grab/mcp`)
+- [**React Scan**](https://react-scan.com/) - Detect performance issues in your React app automatically
 
 </details>
 
