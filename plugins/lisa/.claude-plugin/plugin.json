@@ -1,0 +1,11 @@
+{
+	"name": "lisa",
+	"version": "0.1.0",
+	"description": "Engineering lifecycle skills and agents (lisa:*), vendored from addyosmani/agent-skills (MIT).",
+	"author": {
+		"name": "Addy Osmani"
+	},
+	"homepage": "https://github.com/addyosmani/agent-skills",
+	"repository": "https://github.com/addyosmani/agent-skills",
+	"license": "MIT"
+}

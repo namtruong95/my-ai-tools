@@ -760,6 +760,8 @@ Located in [`configs/claude/agents/`](configs/claude/agents/):
 - `qmd-knowledge` - Project knowledge management
 - `ralph` - Convert PRDs to JSON for autonomous agent execution
 - `security-audit` - Structured security audit workflow using OWASP Top 10, ASVS, and DevSecOps controls
+- `b13:*` - Ticket workflow plugin (`b13:ac-review`, `ticket-plan`, `ticket-build`, `defect-plan`, `defect-build`); config via optional `## b13` section in CLAUDE.md. Source: `plugins/b13/`
+- `lisa:*` - Engineering lifecycle skills + agents vendored from addyosmani/agent-skills (25 skills); source `plugins/lisa/`, sync with `scripts/sync-lisa.sh`
 - `slop` - AI slop detection and removal
 - `tdd` - Test-Driven Development workflows
 - `code-quality-review` - Extremely strict maintainability and structural code quality reviews

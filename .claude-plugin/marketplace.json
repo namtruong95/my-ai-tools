@@ -262,6 +262,27 @@
 			},
 			"source": "./skills/visual-pr",
 			"category": "productivity"
+		},
+		{
+			"name": "b13",
+			"description": "Ticket workflow skills (b13:ac-review, ticket-plan, ticket-build, defect-plan, defect-build). Project-agnostic; configurable via an optional ## b13 section in CLAUDE.md.",
+			"version": "1.0.0",
+			"author": {
+				"name": "Dung Huynh Duc",
+				"email": "dung@productsway.com"
+			},
+			"source": "./plugins/b13",
+			"category": "productivity"
+		},
+		{
+			"name": "lisa",
+			"description": "Engineering lifecycle skills and agents (lisa:*), vendored from addyosmani/agent-skills: spec, plan, build, test, review, ship.",
+			"version": "0.1.0",
+			"author": {
+				"name": "Addy Osmani"
+			},
+			"source": "./plugins/lisa",
+			"category": "development"
 		}
 	]
 }

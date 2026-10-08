@@ -2446,6 +2446,8 @@ enable_plugins() {
 		"commit-atomic|commit-atomic@my-ai-tools|$SCRIPT_DIR|claude"
 		"draft-pull-request|draft-pull-request@my-ai-tools|$SCRIPT_DIR|claude"
 		"security-audit|security-audit@my-ai-tools|$SCRIPT_DIR|claude"
+		"b13|b13@my-ai-tools|$SCRIPT_DIR|claude"
+		"lisa|lisa@my-ai-tools|$SCRIPT_DIR|claude"
 		"claude-hud|claude-hud@claude-hud|jarrodwatts/claude-hud|claude"
 		"worktrunk|worktrunk@worktrunk|max-sixty/worktrunk|claude"
 		"openai-codex|codex@openai-codex|openai/codex-plugin-cc|claude"

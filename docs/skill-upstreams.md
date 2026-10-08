@@ -66,6 +66,7 @@ every skill they may install. Preserve the local pstack-first order.
 | BuilderIO/skills | [530d9ee](https://github.com/BuilderIO/skills/commit/530d9eee0453be9672960ef7b0a265c949cd8b08) | `visual-recap`; supports local-files privacy mode. |
 | Gentleman-Programming/engram | [3423d74](https://github.com/Gentleman-Programming/engram/commit/3423d7484ca11d5222640a1e6880ff5f54f589c5) | Latest release v3.1.0; checked MCP contract has 22 tools. Update stale 20-tool wording. |
 | GoogleChrome/modern-web-guidance | [650eb83](https://github.com/GoogleChrome/modern-web-guidance/commit/650eb83619134adb947b1ee8755e6511270bc444) | `modern-web-guidance`; linked guide bundle. |
+| addyosmani/agent-skills | [1401c8b](https://github.com/addyosmani/agent-skills/commit/1401c8b8030e023baeebb31781a6653fe8e93026) | `lisa` plugin (MIT); skills, agents, references vendored via `scripts/sync-lisa.sh`; includes `idea-refine/scripts/idea-refine.sh`. |
 | av/facts | [30911b8](https://github.com/av/facts/commit/30911b8efe3fd4dc641463ed6de57ca5bedd0d72) | Collection; verification commands execute shell code. |
 | blader/humanizer | [225a6f3](https://github.com/blader/humanizer/commit/225a6f39ac85f76ee48dbad772ea4abe4ed6c9d8) | Root skill. |
 | ctxrs/ctx | [56aaf35](https://github.com/ctxrs/ctx/commit/56aaf35233ce7f8aa739c207525a3d67e6ddddbd) | Agent-history skill; keep sensitive transcripts out of shared outputs. |
