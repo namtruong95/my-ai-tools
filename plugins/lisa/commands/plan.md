@@ -7,6 +7,11 @@ Invoke the lisa:planning-and-task-breakdown skill.
 
 **This command only plans. It never writes implementation code and never starts a build.** Implementation begins only when the user runs `/lisa:build` for this plan. When the plan is written, stop.
 
+## Fixed rules (never override)
+
+- **Always Vietnamese.** Write `Plan.md`, `Todo.md` and the chat summary in Vietnamese so the user can review them, whatever language the spec, the arguments or the conversation use. Code, file paths, identifiers, commands and quoted error strings stay verbatim.
+- **Never run plannotator.** Do not call `/plannotator`, `/plannotator-annotate`, `/plannotator-last` or the `plannotator` tool, and do not offer them. The user reviews `Plan.md` and `Todo.md` directly.
+
 ## Output location (overrides the skill's `tasks/` defaults)
 
 Resolve the repo root with `git rev-parse --show-toplevel` (the repo Claude Code is running in; fall back to the current directory if it is not a git repo). Write exactly two files:
@@ -29,4 +34,4 @@ Resolve the repo root with `git rev-parse --show-toplevel` (the repo Claude Code
 5. Add checkpoints between phases.
 6. Write `Plan.md`: goal and scope, design decisions, dependency graph, phases and checkpoints, risks, open questions, and a task summary referencing `Todo.md`.
 7. Write `Todo.md`: a checklist, one `- [ ]` line per task with an id (`T1`, `T2`, ...), its dependencies, acceptance criteria and verification step. Every box unticked. `/lisa:build` ticks them.
-8. Present the plan for human review, then stop. Tell the user the next step is `/lisa:build <title>` (add `auto` to run every task in one approved pass). Do not begin any task.
+8. Report the two file paths in Vietnamese for the user's own review, then stop. Do not open plannotator. Tell the user the next step is `/lisa:build <title>` (add `auto` to run every task in one approved pass). Do not begin any task.

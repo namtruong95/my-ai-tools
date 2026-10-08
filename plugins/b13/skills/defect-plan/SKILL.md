@@ -14,6 +14,16 @@ Project conventions (`specs_root`, `base_branch`, `ticket_id_prefix`, `output_la
 the optional `## b13` section in the project's `CLAUDE.md` / `AGENTS.md` described in
 `b13:ticket-plan`, with the same defaults.
 
+## Fixed rules (never override)
+
+- **Always Vietnamese.** Write `Defects/<branch>.md` and the chat summary in Vietnamese so the
+  user can review them, whatever language the ticket or the conversation use. Code, file paths,
+  identifiers, commands and quoted error strings stay verbatim. Only §5 (FE hand-off, filled by
+  `b13:defect-build`) stays English.
+- **Never run plannotator.** Do not call `/plannotator`, `/plannotator-annotate`,
+  `/plannotator-last` or the `plannotator` tool, and do not offer them. The user reviews
+  `Defects/<branch>.md` directly.
+
 ## Hard rule: this skill never writes code
 
 The defect file *is* the deliverable. Do not create or modify source code. Implementation starts
@@ -91,10 +101,10 @@ service/DTO reads what) until you can name the specific line(s) responsible.
 
 ## Step 5: Write `Defects/<branch>.md`
 
-Use `output_language` (default: the language of the ticket's own `AC.md`), except the final FE
-hand-off section, which is always English (same rule as `Output.md`).
+Write in Vietnamese, except the final FE hand-off section, which is always English (same rule as
+`Output.md`).
 
-Template (translate the headings into `output_language`):
+Template (translate the headings into Vietnamese):
 
 ````markdown
 # Defect: <ticket id>. <ticket title>
@@ -156,7 +166,7 @@ Keep section 0 first and empty. It is the gate, the same convention as `Plan.md`
 
 ## Step 6: Report and stop
 
-Summarise in chat: the root cause in one or two sentences, what the fix touches, whether it is
+Summarise in chat, in Vietnamese: the root cause in one or two sentences, what the fix touches, whether it is
 additive or risks a decided point, and the one line the user needs to act on (fill in the
 build command). Then stop. Do not begin implementing.
 

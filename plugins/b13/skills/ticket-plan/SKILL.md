@@ -10,6 +10,16 @@ patterns the ticket will have to follow, and write the result to `Plan.md` **in 
 ticket folder**. When the ticket has no `CheckList.md` yet, create it too: `b13:ticket-build`
 ticks that file as it works, so a ticket must not reach build without one.
 
+## Fixed rules (never override)
+
+- **Always Vietnamese.** Write `Plan.md`, `CheckList.md` and the chat summary in Vietnamese so the
+  user can review them, whatever language `AC.md` or the conversation use. Code, file paths,
+  identifiers, commands and quoted error strings stay verbatim. `Output.md` stays English (it is
+  written by `b13:ticket-build`, not here).
+- **Never run plannotator.** Do not call `/plannotator`, `/plannotator-annotate`,
+  `/plannotator-last` or the `plannotator` tool, and do not offer them. The user reviews
+  `Plan.md` and `CheckList.md` directly.
+
 ## Project conventions (read first)
 
 Defaults below apply unless the project overrides them. Look for an optional `## b13` section in
@@ -21,7 +31,7 @@ the project's `CLAUDE.md` or `AGENTS.md` (keys are plain `key: value` bullets):
 | `ticket_dir` | `<specs_root>/<ticket>/`, or any folder that holds an `AC.md`; discover it, do not assume |
 | `base_branch` | `git symbolic-ref --short refs/remotes/origin/HEAD` (strip `origin/`), else `main` |
 | `ticket_id_prefix` | none (branch names are used as-is) |
-| `output_language` | the language `AC.md` is written in (`Output.md` is always English, see `b13:ticket-build`) |
+| `output_language` | ignored by this skill: `Plan.md` and `CheckList.md` are always Vietnamese (`Output.md` is always English, see `b13:ticket-build`) |
 | `verify_commands` | detected from `package.json` scripts, `Makefile`, `pyproject.toml`, `Cargo.toml`, etc. |
 | `scope_ceiling_docs` | none; when set, those documents bound what may be built |
 | `handoff_rules_file` | none; project file describing branch/PR flow and the hand-off requirement |
@@ -123,10 +133,10 @@ Every task must be traceable to a specific AC section, the same way `CheckList.m
 
 ## Step 6: Write `Plan.md`
 
-Write to `<ticket>/Plan.md`, the same folder the `AC.md` came from. Use `output_language`
-(default: the language of `AC.md` and `CheckList.md`). Only `Output.md` is always English.
+Write to `<ticket>/Plan.md`, the same folder the `AC.md` came from, in Vietnamese. Only
+`Output.md` is English.
 
-Template (translate the headings into `output_language`):
+Template (translate the headings into Vietnamese):
 
 ````markdown
 # Plan: <ticket id>. <ticket title>
@@ -198,7 +208,7 @@ ticket must not reach build with nothing to tick.
 
 - **File already exists** → leave it alone. It is the user's running tick-list; do not rewrite,
   reorder or re-tick it. Only mention in your report if it has drifted from the plan.
-- **File missing** → create `<ticket>/CheckList.md` in `output_language`, every box
+- **File missing** → create `<ticket>/CheckList.md` in Vietnamese, every box
   **unticked** (`- [ ]`). The plan groups work into phases; the checklist is the finer-grained
   tick-list under those phases: one line per thing a human can verify, not one line per phase.
 
@@ -250,7 +260,7 @@ Two things to get right:
 
 ## Step 8: Report and stop
 
-Summarise in the chat: phases, how many tasks, what is blocked and by what, whether you created
+Summarise in the chat, in Vietnamese: phases, how many tasks, what is blocked and by what, whether you created
 `CheckList.md` or found one already there, and the one line the user needs to act on (fill in
 the build command). Then stop. Do not begin Phase 1.
 
