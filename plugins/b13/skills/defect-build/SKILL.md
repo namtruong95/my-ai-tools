@@ -63,27 +63,27 @@ already exist from the plan step).
 | `handoff_rules_file`, `scope_ceiling_docs` (if configured) | Branch/PR flow, scope ceiling, hand-off requirement |
 | Project `CLAUDE.md` / `AGENTS.md` | Architecture conventions, registration, auth, DTO shaping, migrations |
 
-## Step 4: Decide what is buildable, then let the user choose
+## Step 4: Build everything, stop at unclear rows
 
-Show the user two lists from the fix plan's file/change table:
+Fixed rule (never override): build **every row** of the fix plan's file/change table, in order, in
+one run. Do not ask the user to pick rows and do not stop between rows. List the rows first so the
+user can see the run order, then start.
 
-- **Buildable tasks**: row id or file, and the change.
-- **Not buildable**: the row and the reason: an open question, anything unclear or not yet
-  understood, an undecided AC point (🟡 / 🔴) in §3, or an unfinished dependency.
+A row is **unclear** if it has an open question or unanswered Q&A, depends on an undecided AC point
+(🟡 / 🔴) in §3, has unclear scope, or you do not fully understand it.
 
-Then **stop and ask the user to pick**: specific rows, or **all buildable rows**. Build nothing
-until they answer.
+When you reach an unclear row:
+- **Do not build it.** Never guess an answer to unblock yourself.
+- **Stop the build there**, and build nothing after it.
+- Report: the rows built, the row you stopped at, and the exact question(s) to answer. Re-running
+  `b13:defect-build` resumes from the first unbuilt row.
 
-Hard rules (never override):
-- **Never build a not-buildable row**, even if the user selects it or asks for "all". Tell them
-  which question must be resolved first. "All" means all *buildable* rows only.
-- Never guess an answer to an open question to unblock yourself.
-- Never silently skip: say plainly what is left out and why.
+Only unclear rows stop the build.
 
 ## Step 5: Build one task at a time
 
 
-For each row the user chose:
+For each row, in order:
 
 1. **Read before writing.** Open the file, understand the surrounding pattern (which base class
    it extends, how sibling services handle the same relation/DTO shape) before editing.

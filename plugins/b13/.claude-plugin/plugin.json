@@ -1,6 +1,6 @@
 {
 	"name": "b13",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Ticket workflow skills (b13:*): AC review, ticket plan/build, defect plan/build. Project-agnostic, configurable via an optional `## b13` section in CLAUDE.md.",
 	"author": {
 		"name": "Dung Huynh Duc",

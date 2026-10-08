@@ -55,33 +55,26 @@ Below, `<ticket>` is the resolved folder.
 **If `Plan.md` has no task list**, stop and run `b13:ticket-plan` first. Do not improvise a
 plan and start coding from it.
 
-## Step 3: Decide what is buildable, then let the user choose
+## Step 3: Build everything, stop at unclear tasks
 
-`Plan.md` marks tasks blocked by unresolved AC points (🟡 / 🔴). Before touching anything, show
-the user two lists:
+Fixed rule (never override): build **every phase and every task** in `Plan.md`, in plan order, in
+one run. Do not ask the user to pick tasks and do not stop between tasks or phases. Print the task
+ids and titles first so the user can see the run order, then start.
 
-- **Buildable tasks**: id, title, one-line scope.
-- **Not buildable**: id, title, and the reason: a blocking AC point, an open question, anything
-  unclear or not yet understood, or an unfinished dependency.
+A task is **unclear** if it is blocked by an unresolved AC point (🟡 / 🔴), has an open question
+or unanswered Q&A, has unclear scope or AC, or you do not fully understand it.
 
-A task is **not buildable** if any of these hold: it is marked blocked (🟡 / 🔴), it has an open
-question, its AC or scope is unclear or you do not fully understand it, or a task it depends on
-is not built.
+When you reach an unclear task:
+- **Do not build it.** Never guess an answer to an open AC point to unblock yourself.
+- **Stop the build there**, and build nothing after it, even if later tasks look independent.
+- Report: the tasks built, the task you stopped at, and the exact question(s) to answer. Re-running
+  `b13:ticket-build` resumes from the first unticked task.
 
-Then **stop and ask the user to pick**: specific buildable task ids, or **all buildable tasks**.
-Build nothing until they answer.
-
-Hard rules (never override):
-- **Never build a not-buildable task**, even if the user selects it, asks for "all", or you think
-  you can guess the answer. Tell them which question must be resolved first. Selecting "all"
-  means all *buildable* tasks only.
-- Never guess an answer to an open AC point to unblock yourself.
-- Never silently skip: say plainly what is left out and why.
-- A ticket with two blocked tasks is not a blocked ticket; build the chosen buildable ones.
+Only unclear tasks stop the build.
 
 ## Step 4: Build one task at a time
 
-For each task the user chose, in plan order:
+For each task, in plan order:
 
 1. **Read before writing.** Open the nearest existing equivalent in the repo and match it:
    naming, file layout, which base class it extends, how errors are raised.

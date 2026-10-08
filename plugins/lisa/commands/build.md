@@ -1,6 +1,6 @@
 ---
-description: Implement a plan from specs/tasks/<title>/ incrementally — build, test, verify. Never commits. This command is the only way to start building. Always lists buildable vs blocked/unclear tasks and lets the user choose; never builds blocked or unclear tasks. Add "auto" to pre-select all buildable tasks.
-argument-hint: "<title> [auto]"
+description: Implement a plan from specs/tasks/<title>/ incrementally — build, test, verify. Never commits. This command is the only way to start building. Builds every phase and task without commits; stops at the first unclear task or open question.
+argument-hint: "<title>"
 ---
 
 Invoke the lisa:incremental-implementation skill alongside lisa:test-driven-development.
@@ -8,6 +8,7 @@ Invoke the lisa:incremental-implementation skill alongside lisa:test-driven-deve
 ## Fixed rules (never override)
 
 - **Never commit.** Absolutely never run `git commit`, `git push`, `git stash` or any other history-changing command, before, during or after the build, in single-task and `auto` mode alike, even if the user asks in the same message or the plan or a skill says to commit. Leave every change uncommitted in the working tree for the user to review and commit. Stage nothing.
+- **Skill commit steps are void.** `lisa:incremental-implementation` (its "Commit" step, "one commit per increment" and "The change is committed" checklist items) and `lisa:git-workflow-and-versioning` tell you to commit after each increment or phase. Ignore every one of those instructions here: no commit after a task, no commit after a phase, no checkpoint commit, no preparatory commit. Treat "committed" checklist items as satisfied by "verified and left uncommitted".
 
 ## The build gate
 
@@ -17,45 +18,30 @@ Invoke the lisa:incremental-implementation skill alongside lisa:test-driven-deve
 
 Repo root: `git rev-parse --show-toplevel`. Plans live in `<repo-root>/specs/tasks/<title>/` (files `Plan.md` and `Todo.md`).
 
-1. `$ARGUMENTS` may start with the plan `<title>` (the folder name under `specs/tasks/`); the remaining word `auto` or `all` selects autonomous mode.
+1. `$ARGUMENTS` may start with the plan `<title>` (the folder name under `specs/tasks/`); any remaining word (`auto`, `all`) is ignored: the build always runs every task.
 2. No title given: list the folders in `specs/tasks/` that have unchecked tasks in `Todo.md`. One match: use it and say so. Several: ask which. None: stop.
 3. If the folder, `Plan.md` or `Todo.md` is missing, or `Todo.md` has no tasks, **stop and tell the user to run `/lisa:plan <title>` first.** Never generate a plan here and never invent tasks.
 
 Below, "the plan" means that `Plan.md`, and "the task list" means that `Todo.md`.
 
-## Choose what to build (always, before any code)
+## Build everything (fixed rule)
 
-Read `Todo.md` and show the user two lists:
+`/lisa:build <title>` builds **every phase and every task** in `Todo.md`, in dependency order (listed order if not explicit), in one run. Do not ask the user to pick tasks, do not stop between tasks or phases, and do not ask for approval first. The `auto` / `all` argument is accepted and changes nothing.
 
-- **Buildable tasks**: id, title, one-line scope.
-- **Not buildable**: id, title, and the reason.
+Before the first task, scan `Todo.md` and `Plan.md` and print one line per task (id, title) so the user can see the run order. Then start building.
 
-A task is **not buildable** if any of these hold: it is marked blocked, it has an open question
-(in `Todo.md` or the `Plan.md` open-questions section), its scope or acceptance criteria are
-unclear or you do not fully understand it, or a task it depends on is not done and not in the
-selection.
+## Stop rule (fixed, never override)
 
-Then **stop and ask the user to pick**: specific task ids, or **all buildable tasks**. Build
-nothing until they answer. The `auto` / `all` argument only pre-selects "all buildable tasks"; it
-never skips this listing, and it still needs the single approval below.
+A task is **unclear** if it has an open question or an unanswered Q&A (in `Todo.md` or the `Plan.md` open-questions section), its scope or acceptance criteria are unclear, or you do not fully understand it.
 
-Hard rules (never override):
-- **Never build a not-buildable task**, even if the user selects it, says "all", or you think you
-  can guess the answer. Tell them which question must be resolved first. "All" means all
-  *buildable* tasks only.
-- Never guess an answer to an open question to unblock yourself, and never invent requirements.
-- Never silently skip: say plainly what is left out and why.
+When you reach an unclear task:
+- **Do not build it**, and do not guess an answer or invent requirements.
+- **Stop the build there.** Build nothing after it either, even if later tasks look independent.
+- Report in Vietnamese: the tasks already built, the task you stopped at, and the exact question(s) the user must answer. After they answer, `/lisa:build <title>` resumes from the next unchecked task.
 
-## Modes
-
-- **One or a few chosen tasks** — implement only the tasks the user selected, in dependency order, then stop.
-- **All buildable tasks** (`/lisa:build <title> auto`, or the user picks "all") — get a single approval of the listed set, then implement *every buildable* task without stopping between them.
-
-Autonomous mode is not faster *per task* — it runs the same test-driven loop — it only removes the human stepping *between* tasks.
+Only unclear tasks stop the build. A merely pending or slow task never does.
 
 ## Per task
-
-For each selected task whose dependencies are done:
 
 1. Read the task's acceptance criteria
 2. Load relevant context (existing code, patterns, types)
@@ -65,20 +51,15 @@ For each selected task whose dependencies are done:
 6. Run the build to verify compilation
 7. Tick the task's box in `Todo.md`
 
-## Autonomous: all buildable tasks (`/lisa:build <title> auto`)
+Every task still earns a passing test. Nothing is committed or staged.
 
-Use this once a plan exists and you want to run it in one pass over the buildable tasks. It removes the manual stepping between tasks — **not** the verification. Every task still earns a passing test. Nothing is committed.
+## Run
 
 1. **Require a plan.** The plan must exist (see *Resolve the plan*). If it does not, stop and tell the user to run `/lisa:plan <title>` first — do not plan here and do not invent requirements.
 2. **Note the baseline.** Run `git status --porcelain` and record which files were already modified, so the final summary separates your changes from unrelated local work. Do not stash or commit anything.
-3. **Single checkpoint.** Present the `Plan.md` summary and the selected buildable task list (plus the not-buildable list and reasons) and wait for an unambiguous affirmative (e.g. "approve", "go", "yes"). Treat hedged responses ("looks reasonable", "I guess") as **not** approved. This is the only human gate — after approval, run autonomously.
-4. **Execute every selected buildable task in dependency order.** Use each task's declared dependencies in `Todo.md`; if they aren't explicit, execute in the order listed. For each task, run the full per-task loop above (RED → GREEN → regression → build → tick in `Todo.md`). Do not stage or commit.
-5. **Stop and ask the user** (do not push through) when:
+3. **Execute every task** per the sections above. Only skip checks for unclear tasks (stop rule). Never push through a failure:
    - a test can't be made to pass or the build breaks without an obvious fix → follow lisa:debugging-and-error-recovery
-   - the spec is ambiguous, or a task needs a decision the spec doesn't cover
    - a task is high-risk or irreversible — auth/permission changes, destructive data migrations, payments, deletions, deploys, anything touching secrets, **or anything you can't undo by reverting the working tree** → follow lisa:doubt-driven-development and get explicit sign-off before continuing
-
-   After the user resolves a blocker, they re-invoke `/lisa:build <title> auto` — it resumes from the next pending task.
-6. **Summarize at the end:** tasks completed, tests added, files changed (uncommitted), and anything skipped, flagged, or left for the user.
+4. **Summarize at the end:** tasks completed, tests added, files changed (uncommitted), and the stop point and open questions if the run stopped early.
 
 If any step fails, follow the lisa:debugging-and-error-recovery skill.
