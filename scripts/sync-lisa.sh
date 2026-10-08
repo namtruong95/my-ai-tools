@@ -117,7 +117,7 @@ cat >"$PLUGIN_DIR/UPSTREAM.md" <<DOC
 - Pinned commit: \`$SHA\`
 - Upstream version: $VERSION
 - Vendored: skills/, agents/, references/, commands/ (from .claude/commands), docs/agents.md (linked from agents/), hooks/ (scripts + docs, no tests; lisa adds hooks/hooks.json registering sdd-cache and simplify-ignore, not session-start; TOML commands, evals are not included)
-- Local overrides (scripts/lisa-overrides/, copied after vendoring): commands/plan.md and commands/build.md (plan output in specs/tasks/<title>/{Plan,Todo}.md; build only runs an existing plan).\n- Rewrites applied by scripts/sync-lisa.sh: \`agent-skills:\` -> \`lisa:\`, \`/spec\` -> \`/lisa:spec\` (all commands), ship.md subagent names -> \`lisa:<name>\`
+- Local overrides (scripts/lisa-overrides/, copied after vendoring): commands/plan.md, build.md, spec.md, review.md and test.md (plan output in specs/tasks/<title>/{Plan,Todo}.md; build only runs an existing plan; spec/review/test output Vietnamese, spec -> specs/user-story.md + specs/acceptance-criteria.md, test -> specs/tests/<title>.md).\n- Rewrites applied by scripts/sync-lisa.sh: \`agent-skills:\` -> \`lisa:\`, \`/spec\` -> \`/lisa:spec\` (all commands), ship.md subagent names -> \`lisa:<name>\`
 
 ## Local patches
 

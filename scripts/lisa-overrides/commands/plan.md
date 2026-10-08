@@ -27,7 +27,7 @@ Resolve the repo root with `git rev-parse --show-toplevel` (the repo Claude Code
 
 ## Steps
 
-1. Enter plan mode — read only, no code changes. Read the existing spec (`SPEC.md`, `docs/SPEC.md`, `spec/`, or whatever the user points at) and the relevant codebase sections.
+1. Enter plan mode — read only, no code changes. Read the existing spec (`specs/user-story.md` + `specs/acceptance-criteria.md`, `SPEC.md`, `docs/SPEC.md`, `spec/`, or whatever the user points at) and the relevant codebase sections.
 2. Identify the dependency graph between components.
 3. Slice work vertically (one complete path per task, not horizontal layers).
 4. Write tasks with acceptance criteria and verification steps.
