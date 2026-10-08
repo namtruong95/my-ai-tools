@@ -27,8 +27,9 @@ On start, stamp section 0 of `Defects/<branch>.md`:
 ```
 
 Two things this authorisation does **not** cover:
-- **Committing or pushing.** Never do either unless asked outright. Leave the working tree for
-  the user to review.
+- **Committing or pushing.** Absolutely never run `git commit`, `git push`, `git stash` or any
+  other history-changing command, even when asked in the same message or when the work is done.
+  Leave the working tree uncommitted for the user to review and commit themselves.
 - **Scope beyond the fix plan.** If something else looks broken while you are in there, note it
   in the report. Do not fix it as a drive-by; the AC and any `scope_ceiling_docs` are the
   ceiling, same as for any ticket.
@@ -62,22 +63,40 @@ already exist from the plan step).
 | `handoff_rules_file`, `scope_ceiling_docs` (if configured) | Branch/PR flow, scope ceiling, hand-off requirement |
 | Project `CLAUDE.md` / `AGENTS.md` | Architecture conventions, registration, auth, DTO shaping, migrations |
 
-## Step 4: Build one task at a time
+## Step 4: Decide what is buildable, then let the user choose
 
-For each row in the fix plan's file/change table:
+Show the user two lists from the fix plan's file/change table:
+
+- **Buildable tasks**: row id or file, and the change.
+- **Not buildable**: the row and the reason: an open question, anything unclear or not yet
+  understood, an undecided AC point (🟡 / 🔴) in §3, or an unfinished dependency.
+
+Then **stop and ask the user to pick**: specific rows, or **all buildable rows**. Build nothing
+until they answer.
+
+Hard rules (never override):
+- **Never build a not-buildable row**, even if the user selects it or asks for "all". Tell them
+  which question must be resolved first. "All" means all *buildable* rows only.
+- Never guess an answer to an open question to unblock yourself.
+- Never silently skip: say plainly what is left out and why.
+
+## Step 5: Build one task at a time
+
+
+For each row the user chose:
 
 1. **Read before writing.** Open the file, understand the surrounding pattern (which base class
    it extends, how sibling services handle the same relation/DTO shape) before editing.
 2. **Implement the task, and only the task.** No adjacent cleanup, no refactoring files you are
    only reading, no behaviour beyond what the fix plan and the AC actually call for.
-3. **Verify**: see Step 5.
+3. **Verify**: see Step 6.
 4. Move to the next task. Do not batch several tasks and verify at the end.
 
 The same project conventions apply as in `b13:ticket-build` (file granularity, registration of
 new entities/modules, exact authorisation matching, never returning persistence models, exact
 AC error strings, naming conventions). Take them from the project's own docs and code.
 
-## Step 5: Verify after each task
+## Step 6: Verify after each task
 
 Use `verify_commands` when configured; otherwise detect typecheck, lint, format and test
 commands from the project (see the table in `b13:ticket-build`). Read the output; do not assume
@@ -96,7 +115,7 @@ tmux send-keys -t "$SESSION" '<command>' Enter
 tmux capture-pane -p -t "$SESSION" -S -40
 ```
 
-## Step 6: Tick the manual-verification checklist
+## Step 7: Tick the manual-verification checklist
 
 `Defects/<branch>.md` §4 holds the concrete repro steps, including the originally reported
 scenario. Actually exercise them (manual API calls, or read the code path closely enough to
@@ -104,7 +123,7 @@ state with confidence what it now returns) before ticking `- [ ]` → `- [x]`. N
 you did not verify. If a step cannot be verified without something outside this skill's reach
 (for example a live two-browser session), say so plainly instead of ticking it.
 
-## Step 7: Write the FE hand-off (§5, English, required)
+## Step 8: Write the FE hand-off (§5, English, required)
 
 Same requirement as `b13:ticket-build`'s `Output.md`. Replace the "Not yet built" placeholder
 in `Defects/<branch>.md` §5 with the actual hand-off:
@@ -116,7 +135,7 @@ in `Defects/<branch>.md` §5 with the actual hand-off:
 - If the fix plan named other spec files to update (for example another ticket's `Output.md`),
   do that now too, and say so in the report.
 
-## Step 8: Report and stop
+## Step 9: Report and stop
 
 Report honestly:
 
@@ -136,5 +155,5 @@ Then stop. Do not commit, do not push, do not start another ticket or defect.
 | Ticking the verification checklist optimistically | Tick only what you actually verified |
 | Adding a field but not flagging that FE must also change to observe the fix | Say so explicitly in §5; additive is not automatically "done" |
 | Fixing an unrelated bug noticed along the way | Note it in the report, do not fix it here |
-| Committing when the fix is done | Never commit unless asked |
+| Committing when the fix is done | Never commit, ever |
 | Silently reopening a decided `AC.md` point the fix plan did not already flag | Stop and ask, same as any ticket work |

@@ -27,8 +27,9 @@ On start, stamp section 0 of `Plan.md`:
 ```
 
 Two things this authorisation does **not** cover:
-- **Committing or pushing.** Never do either unless asked outright. Leave the working tree for
-  the user to review.
+- **Committing or pushing.** Absolutely never run `git commit`, `git push`, `git stash` or any
+  other history-changing command, even when asked in the same message or when the work is done.
+  Leave the working tree uncommitted for the user to review and commit themselves.
 - **Other tickets.** One invocation builds one ticket. If work spills into another ticket's
   scope, stop and report it (the AC and any `scope_ceiling_docs` are the ceiling).
 
@@ -54,20 +55,33 @@ Below, `<ticket>` is the resolved folder.
 **If `Plan.md` has no task list**, stop and run `b13:ticket-plan` first. Do not improvise a
 plan and start coding from it.
 
-## Step 3: Decide what is buildable
+## Step 3: Decide what is buildable, then let the user choose
 
-`Plan.md` marks tasks blocked by unresolved AC points (🟡 / 🔴). Before touching anything:
+`Plan.md` marks tasks blocked by unresolved AC points (🟡 / 🔴). Before touching anything, show
+the user two lists:
 
-- List the tasks you will build.
-- List the tasks you will **skip**, and which open AC point blocks each.
+- **Buildable tasks**: id, title, one-line scope.
+- **Not buildable**: id, title, and the reason: a blocking AC point, an open question, anything
+  unclear or not yet understood, or an unfinished dependency.
 
-Build everything that is not blocked. A ticket with two blocked queries is not a blocked
-ticket. Say plainly what is being left out and why. Never silently skip, and never guess an
-answer to an open AC point in order to unblock yourself.
+A task is **not buildable** if any of these hold: it is marked blocked (🟡 / 🔴), it has an open
+question, its AC or scope is unclear or you do not fully understand it, or a task it depends on
+is not built.
+
+Then **stop and ask the user to pick**: specific buildable task ids, or **all buildable tasks**.
+Build nothing until they answer.
+
+Hard rules (never override):
+- **Never build a not-buildable task**, even if the user selects it, asks for "all", or you think
+  you can guess the answer. Tell them which question must be resolved first. Selecting "all"
+  means all *buildable* tasks only.
+- Never guess an answer to an open AC point to unblock yourself.
+- Never silently skip: say plainly what is left out and why.
+- A ticket with two blocked tasks is not a blocked ticket; build the chosen buildable ones.
 
 ## Step 4: Build one task at a time
 
-For each task in plan order:
+For each task the user chose, in plan order:
 
 1. **Read before writing.** Open the nearest existing equivalent in the repo and match it:
    naming, file layout, which base class it extends, how errors are raised.
@@ -212,5 +226,5 @@ Then stop. Do not commit, do not push, do not start the next ticket.
 | Ticking the checklist optimistically | Tick only what you verified |
 | `Output.md` in a non-English language | English: it is the FE hand-off |
 | Inventing an error string not in the AC | Use the exact string; if none exists, flag it |
-| Committing when the build finishes | Never commit unless asked |
+| Committing when the build finishes | Never commit, ever |
 | Claiming a command passed when its tool is not installed | Report the command you actually ran |
